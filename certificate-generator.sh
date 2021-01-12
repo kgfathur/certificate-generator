@@ -329,4 +329,7 @@ certificate_generate() {
 set_outdir
 get_params
 certificate_generate
-certificate_check
+
+if yesno --default No "Check generated certificate? This will print CA Private Key! (Yes|No) "; then
+    certificate_check
+fi
