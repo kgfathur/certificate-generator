@@ -330,8 +330,3 @@ set_outdir
 get_params
 certificate_generate
 certificate_check
-# if yesno --default $default " ? (Yes|No) [Yes] "; then
-#     echo "You answered yes"
-# else
-#     echo "You answered no"
-# fi
