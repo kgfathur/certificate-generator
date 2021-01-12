@@ -263,12 +263,12 @@ certificate_generate() {
     echo ""
     echo "- - - - - - - - - - - - - - -"
     echo "Generate the Signed Certificate:"
-    if [ -f $server_extfile ]; then
-        if yesno --default yes "$server_extfile Already exist, overwrite? (Yes|No) [$default] "; then
+    if [ -f $server_cert ]; then
+        if yesno --default yes "$server_cert Already exist, overwrite? (Yes|No) [$default] "; then
             echo "openssl x509 -req -days 365 -sha256 -in $server_csr -CA $ca_cert -CAkey $ca_key -CAcreateserial -out $server_cert -extfile $server_extfile"
             openssl x509 -req -days 365 -sha256 -in $server_csr -CA $ca_cert -CAkey $ca_key -CAcreateserial -out $server_cert -extfile $server_extfile
         else
-            echo "Using existing: $server_extfile"
+            echo "Using existing: $server_cert"
         fi
     else
         echo "openssl x509 -req -days 365 -sha256 -in $server_csr -CA $ca_cert -CAkey $ca_key -CAcreateserial -out $server_cert -extfile $server_extfile"
