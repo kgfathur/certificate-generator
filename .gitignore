@@ -1,2 +1,4 @@
 certs/*
+config/*
 !certs/example.pem
+!config/example.conf
