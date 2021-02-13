@@ -212,8 +212,8 @@ certificate_check() {
 }
 
 certificate_generate() {
-    host_name=$(echo "$host_name" | sed -e 's/ /,DNS:/g')
-    host_ip=$(echo "IP:$host_ip" | sed -e 's/ /,IP:/g')
+    host_name=$(echo "$host_name" | sed -e 's/ /, DNS:/g')
+    host_ip=$(echo "IP:$host_ip" | sed -e 's/ /, IP:/g')
     echo ""
     echo "- - - - - - - - - - - - - - -"
     echo "Generate CA Private Key"
@@ -288,19 +288,19 @@ certificate_generate() {
         default_answer=Yes
         if yesno --default $default_answer "$server_extfile Already exist, overwrite? (Yes|No) [$default_answer] "; then
             rm -rf $server_extfile
-            echo "echo subjectAltName = DNS:$host_name,$host_ip,IP:127.0.0.1 >> $server_extfile"
+            echo "echo subjectAltName = DNS:$host_name, $host_ip, IP:127.0.0.1 >> $server_extfile"
             echo "echo extendedKeyUsage = serverAuth >> $server_extfile"
-            echo subjectAltName = DNS:$host_name,$host_ip,IP:127.0.0.1 >> $server_extfile
-            echo extendedKeyUsage = serverAuth >> $server_extfile
+            echo "subjectAltName = DNS:$host_name,$host_ip,IP:127.0.0.1" >> $server_extfile
+            echo "extendedKeyUsage = serverAuth" >> $server_extfile
             cat $server_extfile
         else
             echo "Using existing: $server_extfile"
         fi
     else
-        echo "echo subjectAltName = DNS:$host_name,$host_ip,IP:127.0.0.1 >> $server_extfile"
+        echo "echo subjectAltName = DNS:$host_name, $host_ip, IP:127.0.0.1 >> $server_extfile"
         echo "echo extendedKeyUsage = serverAuth >> $server_extfile"
-        echo subjectAltName = DNS:$host_name,$host_ip,IP:127.0.0.1 >> $server_extfile
-        echo extendedKeyUsage = serverAuth >> $server_extfile
+        echo "subjectAltName = DNS:$host_name, $host_ip, IP:127.0.0.1" >> $server_extfile
+        echo "extendedKeyUsage = serverAuth" >> $server_extfile
         cat $server_extfile
     fi
 
