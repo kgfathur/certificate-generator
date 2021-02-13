@@ -11,8 +11,9 @@ server_cert="server-cert.pem"
 server_csr="server.csr"
 client_key="key.pem"
 client_cert="cert.pem"
-host_name=$(hostname -f)
-host_ip=$(hostname -I | sed 's/ $//g')
+default_host_name=$(hostname -f)
+default_common_name=$default_host_name
+default_host_ip=$(hostname -I | sed 's/ $//g')
 default=Yes
 
 #####################################################################
@@ -143,6 +144,9 @@ set_outdir() {
 }
 
 get_params() {
+    echo ""
+    echo "Get parameters from system..."
+
     echo "Default Configuration:"
     echo -e "   1) RSA \t\t\t= ${rsa_bit}-bit"
 	echo -e "   2) CA key \t\t\t= ${ca_key}"
@@ -151,12 +155,46 @@ get_params() {
 	echo -e "   5) Server Certicifate \t= ${server_cert}"
 	echo -e "   6) Server Key \t\t= ${server_key}"
 	echo -e "   7) Server Certicifate \t= ${server_cert}"
-	echo -e "   8) Hostname \t\t\t= ${host_name}"
-	echo -e "   9) Host IP Address \t\t= ${host_ip}"
+	echo -e "   8) Common Name \t\t= ${default_common_name}"
+	echo -e "   8) Hostname \t\t\t= ${default_host_name}"
+	echo -e "   9) Host IP Address \t\t= ${default_host_ip}"
     # until [[ -n "$get_public_ip" || -n "$public_ip" ]]; do
 	# 	echo "Invalid input."
 	# 	read -p "Public IPv4 address / hostname: " public_ip
 	# done
+    
+    echo ""
+    default_answer=No
+    if yesno --default $default_answer "Change Commond Name? (Yes|No) [$default_answer] "; then
+		read -p "Hostname [$default_common_name]: " common_name
+		[[ -z "$common_name" ]] && common_name=$default_common_name
+        echo "Hostname set to: $common_name"
+    else
+        host_name=$default_common_name
+        echo "Using Hostname: $common_name"
+    fi
+
+    echo ""
+    default_answer=No
+    if yesno --default $default_answer "Change Hostname? (Yes|No) [$default_answer] "; then
+		read -p "Hostname [$default_host_name]: " host_name
+		[[ -z "$host_name" ]] && host_name=$default_host_name
+        echo "Hostname set to: $host_name"
+    else
+        host_name=$default_host_name
+        echo "Using Hostname: $host_name"
+    fi
+
+    echo ""
+    default_answer=No
+    if yesno --default $default_answer "Change Host IP? (Yes|No) [$default_answer] "; then
+		read -p "Host IP [$default_host_ip] (space separated): " host_ip
+		[[ -z "$host_ip" ]] && host_ip=$default_host_ip
+        echo "Host IP set to: $host_ip"
+    else
+        host_ip=$default_host_ip
+        echo "Using Host IP: $host_ip"
+    fi
 }
 
 certificate_check() {
@@ -174,12 +212,14 @@ certificate_check() {
 }
 
 certificate_generate() {
+    host_name=$(echo "$host_name" | sed -e 's/ /,DNS:/g')
     host_ip=$(echo "IP:$host_ip" | sed -e 's/ /,IP:/g')
     echo ""
     echo "- - - - - - - - - - - - - - -"
     echo "Generate CA Private Key"
     if [ -f $ca_key ]; then
-        if yesno --default yes "$ca_key Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$ca_key Already exist, overwrite? (Yes|No) [$default_answer] "; then
             echo "openssl genrsa -aes256 -out $ca_key $rsa_bit"
             openssl genrsa -aes256 -out $ca_key $rsa_bit
         else
@@ -194,7 +234,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Generate CA Certificate"
     if [ -f $ca_cert ]; then
-        if yesno --default yes "$ca_cert Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$ca_cert Already exist, overwrite? (Yes|No) [$default_answer] "; then
             echo "openssl req -new -x509 -days 365 -key $ca_key -sha256 -out $ca_cert"
             openssl req -new -x509 -days 365 -key $ca_key -sha256 -out $ca_cert
         else
@@ -210,7 +251,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Generate Server Key"
     if [ -f $server_key ]; then
-        if yesno --default yes "$server_key Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$server_key Already exist, overwrite? (Yes|No) [$default_answer] "; then
             echo "openssl genrsa -out $server_key $rsa_bit"
             openssl genrsa -out $server_key $rsa_bit
         else
@@ -226,15 +268,16 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Certificate Signing Request (CSR)"
     if [ -f $server_csr ]; then
-        if yesno --default yes "$server_csr Already exist, overwrite? (Yes|No) [$default] "; then
-            echo "openssl req -subj "/CN=$host_name " -sha256 -new -key $server_key -out $server_csr"
-            openssl req -subj "/CN=$host_name " -sha256 -new -key $server_key -out $server_csr            
+        default_answer=Yes
+        if yesno --default $default_answer "$server_csr Already exist, overwrite? (Yes|No) [$default_answer] "; then
+            echo "openssl req -subj "/CN=$common_name " -sha256 -new -key $server_key -out $server_csr"
+            openssl req -subj "/CN=$common_name " -sha256 -new -key $server_key -out $server_csr            
         else
             echo "Using existing: $server_csr"
         fi
     else
-        echo "openssl req -subj "/CN=$host_name " -sha256 -new -key $server_key -out $server_csr"
-        openssl req -subj "/CN=$host_name " -sha256 -new -key $server_key -out $server_csr
+        echo "openssl req -subj "/CN=$common_name " -sha256 -new -key $server_key -out $server_csr"
+        openssl req -subj "/CN=$common_name " -sha256 -new -key $server_key -out $server_csr
     fi
     
 
@@ -242,7 +285,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Set DNS and IP Address"
     if [ -f $server_extfile ]; then
-        if yesno --default yes "$server_extfile Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$server_extfile Already exist, overwrite? (Yes|No) [$default_answer] "; then
             rm -rf $server_extfile
             echo "echo subjectAltName = DNS:$host_name,$host_ip,IP:127.0.0.1 >> $server_extfile"
             echo "echo extendedKeyUsage = serverAuth >> $server_extfile"
@@ -264,7 +308,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Generate the Signed Certificate:"
     if [ -f $server_cert ]; then
-        if yesno --default yes "$server_cert Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$server_cert Already exist, overwrite? (Yes|No) [$default_answer] "; then
             echo "openssl x509 -req -days 365 -sha256 -in $server_csr -CA $ca_cert -CAkey $ca_key -CAcreateserial -out $server_cert -extfile $server_extfile"
             openssl x509 -req -days 365 -sha256 -in $server_csr -CA $ca_cert -CAkey $ca_key -CAcreateserial -out $server_cert -extfile $server_extfile
         else
@@ -279,7 +324,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Create a Client Key"
     if [ -f $client_key ]; then
-        if yesno --default yes "$client_key Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$client_key Already exist, overwrite? (Yes|No) [$default_answer] "; then
             echo "openssl genrsa -out $client_key $rsa_bit"
             openssl genrsa -out $client_key $rsa_bit
         else
@@ -294,7 +340,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Create Client Certificate Signing Request"
     if [ -f $client_csr ]; then
-        if yesno --default yes "$client_csr Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$client_csr Already exist, overwrite? (Yes|No) [$default_answer] "; then
             echo "openssl req -subj '/CN=client' -new -key $client_key -out $client_csr"
             openssl req -subj '/CN=client' -new -key $client_key -out $client_csr
         else
@@ -309,7 +356,8 @@ certificate_generate() {
     echo "- - - - - - - - - - - - - - -"
     echo "Client Extension Config"
     if [ -f $client_extfile ]; then
-        if yesno --default yes "$client_extfile Already exist, overwrite? (Yes|No) [$default] "; then
+        default_answer=Yes
+        if yesno --default $default_answer "$client_extfile Already exist, overwrite? (Yes|No) [$default_answer] "; then
             rm -rf $client_extfile
             echo "echo extendedKeyUsage = clientAuth > $client_extfile"
             echo "openssl x509 -req -days 365 -sha256 -in $client_csr -CA $ca_cert -CAkey $ca_key -CAcreateserial -out $client_cert -extfile $client_extfile"
@@ -330,6 +378,7 @@ set_outdir
 get_params
 certificate_generate
 
-if yesno --default No "Check generated certificate? This will print CA Private Key! (Yes|No) "; then
+default_answer=No
+if yesno --default $default_answer "Check generated certificate? This will print CA Private Key! (Yes|No) [$default_answer]"; then
     certificate_check
 fi
