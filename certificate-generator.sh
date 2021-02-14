@@ -123,17 +123,13 @@ print_params() {
 
 set_pass() {
     unset pass_phrase
-    prompt="Enter Pass Phrase: "
-    while IFS= read -p "$prompt" -r -s -n 1 char
-    do
-        if [[ $char == $'\0' ]]
-        then
-            break
-        fi
-        prompt='*'
-        pass_phrase+="$char"
-    done
-    [[ -z "$pass_phrase" ]] && master_pass=$default_master_pass
+    read -p "Enter Pass Phrase: " -r -s pass_phrase
+    
+    if [[ -z "$pass_phrase" ]]; then
+        master_pass=No
+        echo ""
+        echo "Use password = Yes, But no password provide!"
+    fi
     echo ""
 }
 
@@ -173,19 +169,19 @@ set_params() {
     echo ""
     default_answer=$master_pass
     if yesno --default $default_answer "Set Master Password? (Yes|No) [$default_answer] "; then
-        echo "Use Master Pass Phrase set to: $master_pass"
         master_pass_is=True
     else
         master_pass=No
         master_pass_is=False
-        echo "Use Master Pass Phrase set to: $master_pass"
     fi
+
     ans=$(tr '[:upper:]' '[:lower:]' <<<$master_pass)
     if [[ "$ans" == 'y'  ||  "$ans" == 'yes'  ||  "$ans" == 'n'  ||  "$ans" == 'no' ]]; then
         if [[ "$ans" = "y" || "$ans" == "yes" ]]; then
             set_pass
         fi
     fi
+    echo "Use Master Pass Phrase set to: $master_pass"
 
     echo ""
     default_answer=No
