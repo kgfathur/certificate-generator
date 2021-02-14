@@ -145,9 +145,18 @@ set_params() {
     echo "  ${outdir}"
     
     if [ ! -d $outdir ]; then
-        echo "Directory '$outdir'not exist!"
+        echo "Default Output Directory:"
+        echo "  '$outdir' not exist!"
         echo "Creating... '$outdir'"
         mkdir -p $outdir
+    fi
+    [[ -z "$config_dir" ]] && config_dir=$default_config_dir
+    
+    if [ ! -d $config_dir ]; then
+        echo "Default Config Directory:"
+        echo "  '$config_dir' not exist!"
+        echo "Creating... '$config_dir'"
+        mkdir -p $config_dir
     fi
     
     client_cn=$default_client_cn
@@ -271,13 +280,13 @@ set_params() {
     echo ""
     default_answer=No
     echo "Current Config Dir:"
-    echo "  '${default_config_dir}'"
+    echo "  '${config_dir}'"
     if yesno --default $default_answer "Change Config dir? (Yes|No) [$default_answer] "; then
-		read -p "Config dir [$default_config_dir]: " config_dir
+		read -p "Config dir [$config_dir]: " config_dir
 		[[ -z "$config_dir" ]] && config_dir=$default_config_dir
         echo "Config dir set to: $config_dir"
     else
-        config_dir=$default_config_dir
+        config_dir=$config_dir
         echo "Using Config dir: $config_dir"
     fi
 
