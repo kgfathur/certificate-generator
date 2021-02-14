@@ -604,10 +604,10 @@ certificate_generate() {
             cmd1="echo 'extendedKeyUsage = clientAuth' > $out_client_extfile"
             cmd2="openssl x509 -req -days $days -sha256 -in $out_client_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
         fi
-        if [ -f $out_client_csr ]; then
+        if [ -f $out_client_cert ]; then
             default_answer=Yes
             echo "Client Signed Certificate Already Exist:"
-            echo "  '${out_client_csr}'"
+            echo "  '${out_client_cert}'"
             if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
                 rm -rf $out_client_extfile
                 echo "$cmd1"
