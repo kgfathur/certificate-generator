@@ -429,16 +429,12 @@ certificate_generate() {
         if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-key\)/pass:**** -key/g'
             eval "$cmd"
-            # echo "openssl req -new -x509 -days $days -passin pass:***** -key $out_ca_key -sha256 -out $out_ca_cert -config $config_file_fp"
-            # openssl req -new -x509 -days $days -passin pass:$pass_phrase -key $out_ca_key -sha256 -out $out_ca_cert -config $config_file_fp
         else
             echo "Using existing: $out_ca_cert"
         fi
     else
         echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-key\)/pass:**** -key/g'
         eval "$cmd"
-        # echo "openssl req -new -x509 -days $days -passin pass:***** -key $out_ca_key -sha256 -out $out_ca_cert -config $config_file_fp"
-        # openssl req -new -x509 -days $days -passin pass:$pass_phrase -key $out_ca_key -sha256 -out $out_ca_cert -config $config_file_fp
     fi
     
     echo ""
@@ -457,16 +453,12 @@ certificate_generate() {
         if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
             eval "$cmd"
-            # echo "openssl genrsa -passout pass:***** -out $out_server_key $rsa_bit"
-            # openssl genrsa -passout pass:$pass_phrase -out $out_server_key $rsa_bit
         else
             echo "Using existing: $out_server_key"
         fi
     else
         echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
         eval "$cmd"
-        # echo "openssl genrsa -passout pass:***** -out $out_server_key $rsa_bit"
-        # openssl genrsa -passout pass:$pass_phrase -out $out_server_key $rsa_bit
     fi
 
     echo ""
@@ -481,16 +473,12 @@ certificate_generate() {
         if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
             echo "$cmd"
             eval "$cmd"
-            # echo "openssl req -sha256 -new -key $out_server_key -config $config_file_fp -out $out_server_csr"
-            # openssl req -sha256 -new -key $out_server_key -config $config_file_fp -out $out_server_csr
         else
             echo "Using existing: $out_server_csr"
         fi
     else
         echo "$cmd"
         eval "$cmd"
-        # echo "openssl req -sha256 -new -key $out_server_key -config $config_file_fp -out $out_server_csr "
-        # openssl req -sha256 -new -key $out_server_key -config $config_file_fp -out $out_server_csr 
     fi
 
     echo ""
@@ -509,16 +497,12 @@ certificate_generate() {
         if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-in\)/pass:**** -in/g'
             eval "$cmd"
-            # echo "openssl x509 -req -sha256 -days $days -passin pass:***** -in $out_server_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -signkey $out_server_key -out $out_server_cert"
-            # openssl x509 -req -sha256 -days $days -passin pass:$pass_phrase -in $out_server_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -signkey $out_server_key -out $out_server_cert
         else
             echo "Using existing: $out_server_cert"
         fi
     else
         echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-in\)/pass:**** -in/g'
         eval "$cmd"
-        # echo "openssl x509 -req -sha256 -days $days -passin pass:***** -in $out_server_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -signkey $out_server_key -out $out_server_cert"
-        # openssl x509 -req -sha256 -days $days -passin pass:$pass_phrase -in $out_server_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -signkey $out_server_key -out $out_server_cert
     fi
 
     echo ""
@@ -542,16 +526,12 @@ certificate_generate() {
             if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
                 echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-in\)/pass:**** -in/g'
                 eval "$cmd"
-                # echo "openssl pkcs12 -export -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -export -passout pass:***** -passin pass:***** -in $out_server_cert -inkey $out_server_key -name $pkcs12_name -out $out_pkcs12_cert"
-                # openssl pkcs12 -export -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -export -passout pass:$pass_phrase -passin pass:$pass_phrase -in $out_server_cert -inkey $out_server_key -name $pkcs12_name -out $out_pkcs12_cert
             else
                 echo "Using existing: $out_server_cert"
             fi
         else
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-in\)/pass:**** -in/g'
             eval "$cmd"
-            # echo "openssl pkcs12 -export -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -export -passout pass:***** -passin pass:***** -in $out_server_cert -inkey $out_server_key -name $pkcs12_name -out $out_pkcs12_cert"
-            # openssl pkcs12 -export -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -export -passout pass:$pass_phrase -passin pass:$pass_phrase -in $out_server_cert -inkey $out_server_key -name $pkcs12_name -out $out_pkcs12_cert
         fi
 
     fi
@@ -580,16 +560,12 @@ certificate_generate() {
             if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
                 echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
                 eval "$cmd"
-                # echo "openssl genrsa -passout pass:***** -out $out_client_key $rsa_bit"
-                # openssl genrsa -passout pass:$pass_phrase -out $out_client_key $rsa_bit
             else
                 echo "Using existing: $out_client_key"
             fi
         else
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
             eval "$cmd"
-            # echo "openssl genrsa -passout pass:***** -out $out_client_key $rsa_bit"
-            # openssl genrsa -passout pass:$pass_phrase -out $out_client_key $rsa_bit
         fi
 
         echo ""
@@ -604,16 +580,12 @@ certificate_generate() {
             if yesno --default $default_answer "Already exist, overwrite? (Yes|No) [$default_answer] "; then
                 echo "$cmd"
                 eval "$cmd"
-                # echo "openssl req -subj '/CN=$client_cn' -new -key $out_client_key -out $out_client_csr"
-                # openssl req -subj "/CN=$client_cn" -new -key $out_client_key -out $out_client_csr
             else
                 echo "Using existing: $out_client_csr"
             fi
         else
             echo "$cmd"
             eval "$cmd"
-            # echo "openssl req -subj '/CN=$client_cn' -new -key $out_client_key -out $out_client_csr"
-            # openssl req -subj "/CN=$client_cn" -new -key $out_client_key -out $out_client_csr
         fi
         
         echo ""
@@ -637,10 +609,6 @@ certificate_generate() {
                 echo "$cmd2" | sed -e 's/\(pass:.\{1,\}\s\-CA\)/pass:**** -CA/g'
                 eval "$cmd1"
                 eval "$cmd2"
-                # echo "echo extendedKeyUsage = clientAuth > $out_client_extfile"
-                # echo "openssl x509 -req -days $days -sha256 -in $out_client_csr -passin pass:***** -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
-                # echo "extendedKeyUsage = clientAuth" > $out_client_extfile
-                # openssl x509 -req -days $days -sha256 -in $out_client_csr -passin pass:$pass_phrase -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile
             else
                 echo "Using existing: $out_client_extfile"
             fi
@@ -649,10 +617,6 @@ certificate_generate() {
             echo "$cmd2" | sed -e 's/\(pass:.\{1,\}\s\-CA\)/pass:**** -CA/g'
             eval "$cmd1"
             eval "$cmd2"
-            # echo "echo extendedKeyUsage = clientAuth > $out_client_extfile"
-            # echo "openssl x509 -req -days $days -sha256 -in $out_client_csr -passin pass:***** -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
-            # echo "extendedKeyUsage = clientAuth" > $out_client_extfile
-            # openssl x509 -req -days $days -sha256 -in $out_client_csr -passin pass:$pass_phrase -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile
         fi
     fi
     
