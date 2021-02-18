@@ -95,6 +95,14 @@ print_params() {
         delimiter=$default_delimiter
     fi
 
+    [[ ! -z "$out_prefix" ]] && outdir="${outdir}/${out_prefix}"
+    if [ ! -d $outdir ]; then
+        echo "Output Directory:"
+        echo "  '$outdir' not exist!"
+        echo "Creating... '$outdir'"
+        mkdir -p $outdir
+    fi
+
     out_ca_key="${outdir}/${out_prefix}${delimiter}${ca_key}"
     out_ca_cert="${outdir}/${out_prefix}${delimiter}${ca_cert}"
     out_server_key="${outdir}/${out_prefix}${delimiter}${server_key}"
@@ -179,6 +187,7 @@ set_params() {
     fi
 
     [[ -z "$config_dir" ]] && config_dir=$default_config_dir
+    [[ -z "$config_file" ]] && config_file=$default_config_file
     [[ -z "$default_ca_location" ]] && default_ca_location=$outdir
     [[ -z "$ca_location" ]] && ca_location=$default_ca_location
     [[ -z "$cakey_existing" ]] && cakey_existing=$default_cakey_existing
@@ -287,10 +296,13 @@ set_params() {
         echo "This will generate new CA Certificate"
         echo ""
         echo "CA Config File:"
+        
+        [[ ! -z "$out_prefix" ]] && caconfig_file="$out_prefix-$caconfig_file"
         echo "  '${config_dir}/{${caconfig_file}}'"
+        default_value=$caconfig_file
         until [[ -f "$caconfig_file_fp" ]]; do
-            read -p "CA Config [$caconfig_file]: " caconfig_file
-            [[ -z "$caconfig_file" ]] && caconfig_file=$default_caconfig_file
+            read -p "CA Config [$default_value]: " caconfig_file
+            [[ -z "$caconfig_file" ]] && caconfig_file=$default_value
             caconfig_file_fp=${config_dir}/${caconfig_file}
             [[ ! -f $caconfig_file_fp ]] \
             && echo "cert-gen: cannot access '$caconfig_file_fp': No such file or directory"
@@ -302,20 +314,19 @@ set_params() {
     echo ""
     default_answer=No
     echo "Server Config File:"
-    echo "  '${config_dir}/{${default_config_file}}'"
-    if yesno --default $default_answer "Change Config file? (Yes|No) [$default_answer] "; then
-		read -p "Server file [$default_config_file]: " config_file
-		[[ -z "$config_file" ]] && config_file=$default_config_file
-        echo "Server file set to: $config_file"
+    [[ ! -z "$out_prefix" ]] && config_file="$out_prefix-$config_file"
+    echo "  '${config_dir}/{${config_file}}'"
+    default_value=$config_file
+    until [[ -f "$config_file_fp" ]]; do
+        read -p "CA Config [$default_value]: " config_file
+        [[ -z "$config_file" ]] && config_file=$default_value
         config_file_fp=${config_dir}/${config_file}
-        echo "Server file full path: $config_file_fp"
-    else
-        config_file=$default_config_file
-        echo "Using Server Config file: $config_file"
-        config_file_fp=${config_dir}/${config_file}
-        echo "Server Config file full path: $config_file_fp"
-    fi
-
+        [[ ! -f $config_file_fp ]] \
+        && echo "cert-gen: cannot access '$config_file_fp': No such file or directory"
+    done
+    echo "Server Config file set to : $caconfig_file"
+    echo "Server Config file full path: $caconfig_file_fp"
+    
     echo ""
     default_answer=No
     if yesno --default $default_answer "Set RSA bits? (Yes|No) [$default_answer] "; then
