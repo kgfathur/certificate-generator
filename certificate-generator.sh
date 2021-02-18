@@ -23,15 +23,6 @@
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# command this clear screen and filling scrollback
-# printf "\033[H"
-# this one more flexible, wont lost stdout history
-printf "\033[2J" && printf "\033[H"
-# Reference: https://stackoverflow.com/questions/5367068/clear-a-terminal-screen-for-real
-# Read more VT100 terminal escape codes:
-# https://vt100.net/docs/vt510-rm/chapter4.html
-# https://www2.ccs.neu.edu/research/gpc/MSim/vona/terminal/vtansi.htm
-
 echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #"
 echo "                 CERTIFICATE GENERATOR HELPER"
 echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
@@ -50,19 +41,31 @@ default_config_dir="$workdir/config"
 default_config_file="ssl.conf"
 default_config_file_fp="$default_config_dir/${default_config_file}"
 
+## Existing object
+default_ca_location="$outdir/ca"
+default_cakey_existing="ca.key"
+default_cacert_existing="ca.crt"
+default_caconfig_file="ca.conf"
+
 default_master_pass=Yes
 default_days=365
 default_rsa_bit=4096
 out_prefix_default=""
 default_delimiter="-"
 
+# Choice
+default=Yes
+use_existing_ca=Yes
+pkcs12_cert_create=No
+client_cert_create=No
+
+# Generated Output
 ca_key="ca.key"
 ca_cert="ca.crt"
 server_key="server.key"
 server_csr="server.csr"
 server_cert="server.crt"
 
-pkcs12_cert_create=No
 pkcs12_name="server-pkcs"
 pkcs12_cert="server.p12"
 
@@ -71,8 +74,18 @@ client_key="client.key"
 client_csr="client.csr"
 client_cert="client.crt"
 client_extfile="client-extfile.cnf"
-client_cert_create=No
-default=Yes
+
+clear_screen() {
+    # command this clear screen and filling scrollback
+    # printf "\033[H"
+    # this one more flexible, wont lost stdout history
+    printf "\033[2J" && printf "\033[H"
+    # Reference: https://stackoverflow.com/questions/5367068/clear-a-terminal-screen-for-real
+    # Read more VT100 terminal escape codes:
+    # https://vt100.net/docs/vt510-rm/chapter4.html
+    # https://www2.ccs.neu.edu/research/gpc/MSim/vona/terminal/vtansi.htm
+
+}
 
 print_params() {
     if [[ -z "$out_prefix" ]]; then
@@ -98,27 +111,38 @@ print_params() {
         out_client_cert="${outdir}/${out_prefix}${delimiter}${client_cert}"
         out_client_extfile="${outdir}/${out_prefix}${delimiter}${client_extfile}"
     fi
+    ans=$(tr '[:upper:]' '[:lower:]' <<<$use_existing_ca)
+    if [ "$ans" == "yes" ]; then
+        used_cakey="$cakey_existing_fp"
+        used_cacert="$cacert_existing_fp"
+        caconfig_file_fp=""
+    else
+        used_cakey="$out_ca_key"
+        used_cacert="$out_ca_cert"
+    fi
     
-
+    echo ""
     echo "$1 Configuration:"
 	echo -e "   1) Config File \t\t= ${config_file_fp}"
 	echo -e "   2) Use Master Pass Phrase \t= ${master_pass}"
     echo -e "   3) RSA \t\t\t= ${rsa_bit}-bits"
     echo -e "   4) Days \t\t\t= ${days} days"
 	echo -e "   5) Output Prefix \t\t= ${out_prefix}"
-	echo -e "   6) CA Private key \t\t= ${out_ca_key}"
-	echo -e "   7) CA Certificate \t\t= ${out_ca_cert}"
-	echo -e "   8) Server Key \t\t= ${out_server_key}"
-	echo -e "   9) Server CSR \t\t= ${out_server_csr}"
-	echo -e "  10) Server Certicifate \t= ${out_server_cert}"
-	echo -e "  11) Generte PKCS#12 \t\t= ${pkcs12_cert_create}"
-	echo -e "  12) PKCS#12 Name \t\t= ${pkcs12_name}"
-	echo -e "  13) PKCS#12 Certicifate \t= ${out_pkcs12_cert}"
-	echo -e "  14) Generate Client Cert. \t= ${client_cert_create}"
-	echo -e "  15) Client Common Name \t= ${client_cn}"
-	echo -e "  16) Client Key \t\t= ${out_client_key}"
-	echo -e "  17) Client CSR \t\t= ${out_client_csr}"
-	echo -e "  18) Client Certicifate \t= ${out_client_cert}"
+	echo -e "   6) Use Existing CA \t\t= ${use_existing_ca}"
+	echo -e "   7) CA Config \t\t= ${caconfig_file_fp}"
+	echo -e "   9) CA Private key \t\t= ${used_cakey}"
+	echo -e "  10) CA Certificate \t\t= ${used_cacert}"
+	echo -e "  11) Server Key \t\t= ${out_server_key}"
+	echo -e "  12) Server CSR \t\t= ${out_server_csr}"
+	echo -e "  13) Server Certicifate \t= ${out_server_cert}"
+	echo -e "  14) Generte PKCS#12 \t\t= ${pkcs12_cert_create}"
+	echo -e "  15) PKCS#12 Name \t\t= ${pkcs12_name}"
+	echo -e "  16) PKCS#12 Certicifate \t= ${out_pkcs12_cert}"
+	echo -e "  17) Generate Client Cert. \t= ${client_cert_create}"
+	echo -e "  18) Client Common Name \t= ${client_cn}"
+	echo -e "  19) Client Key \t\t= ${out_client_key}"
+	echo -e "  20) Client CSR \t\t= ${out_client_csr}"
+	echo -e "  21) Client Certicifate \t= ${out_client_cert}"
 }
 
 set_pass() {
@@ -146,7 +170,24 @@ set_params() {
         echo "Creating... '$outdir'"
         mkdir -p $outdir
     fi
+    if [ ! -d $default_ca_location ]; then
+        echo "Default CA Location Directory:"
+        echo "  '$default_ca_location' not exist!"
+        echo "Creating... '$default_ca_location'"
+        mkdir -p $default_ca_location
+        echo ""
+    fi
+
     [[ -z "$config_dir" ]] && config_dir=$default_config_dir
+    [[ -z "$default_ca_location" ]] && default_ca_location=$outdir
+    [[ -z "$ca_location" ]] && ca_location=$default_ca_location
+    [[ -z "$cakey_existing" ]] && cakey_existing=$default_cakey_existing
+    [[ -z "$cakey_existing_fp" ]] && cakey_existing_fp="${ca_location}/${cakey_existing}"
+    [[ -z "$cacert_existing" ]] && cacert_existing=$default_cacert_existing
+    [[ -z "$cacert_existing_fp" ]] && cacert_existing_fp="${ca_location}/${cacert_existing}"
+    [[ -z "$caconfig_file" ]] && caconfig_file=$default_caconfig_file
+    [[ -z "$caconfig_file_fp" ]] && caconfig_file_fp="${config_dir}/${caconfig_file}"
+    
     
     if [ ! -d $config_dir ]; then
         echo "Default Config Directory:"
@@ -165,7 +206,7 @@ set_params() {
     [[ ! -z "$out_prefix_default" ]] && out_prefix=$out_prefix_default
 
     print_params 'Default'
-
+    
     echo ""
     default_answer=$master_pass
     if yesno --default $default_answer "Set Master Password? (Yes|No) [$default_answer] "; then
@@ -182,6 +223,98 @@ set_params() {
         fi
     fi
     echo "Use Master Pass Phrase set to: $master_pass"
+
+    echo ""
+    default_answer=Yes
+    if yesno --default $default_answer "Set Common config name? (Yes|No) [$default_answer] "; then
+		read -p "Common config name [$out_prefix]: " out_prefix
+		[[ -z "$out_prefix" ]] && out_prefix=$out_prefix_default
+        echo "Common config name set to: $out_prefix"
+    else
+        out_prefix=$out_prefix
+        echo "Using default Common config name: $out_prefix"
+    fi
+    
+    echo ""
+    default_answer=No
+    echo "Current Config Dir:"
+    echo "  '${config_dir}'"
+    if yesno --default $default_answer "Change Config dir? (Yes|No) [$default_answer] "; then
+		read -p "Config dir [$config_dir]: " config_dir
+		[[ -z "$config_dir" ]] && config_dir=$default_config_dir
+        echo "Config dir set to: $config_dir"
+    else
+        config_dir=$config_dir
+        echo "Using Config dir: $config_dir"
+    fi
+
+    echo ""
+    default_answer=$use_existing_ca
+    if yesno --default $default_answer "Use existing CA? (Yes|No) [$default_answer] "; then
+        use_existing_ca="Yes"
+        read -p "CA Location [$ca_location]: " ca_location
+		[[ -z "$ca_location" ]] && ca_location=$default_ca_location
+        echo "CA Location set to : $ca_location"
+
+        echo "Existing CA Key:"
+        echo "  '${ca_location}/{${cakey_existing}}'"
+        until [[ -f "$cakey_existing_fp" ]]; do
+            read -p "CA Key [$cakey_existing]: " cakey_existing
+            [[ -z "$cakey_existing" ]] && cakey_existing=$default_cakey_existing
+            cakey_existing_fp=${ca_location}/${cakey_existing}
+            [[ ! -f $cakey_existing_fp ]] \
+            && echo "cert-gen: cannot access '$cakey_existing_fp': No such file or directory"
+		done
+        echo "CA Key to: $cakey_existing"
+        echo "CA Key full path: $cakey_existing_fp"
+
+
+        echo "Existing CA Certificate:"
+        echo "  '${ca_location}/{${cacert_existing}}'"
+        until [[ -f "$cacert_existing_fp" ]]; do
+            read -p "CA Certificate [$cacert_existing]: " cacert_existing
+            [[ -z "$cacert_existing" ]] && cacert_existing=$default_cacert_existing
+            cacert_existing_fp=${ca_location}/${cacert_existing}
+            [[ ! -f $cacert_existing_fp ]] \
+            && echo "cert-gen: cannot access '$cacert_existing_fp': No such file or directory"
+        done
+        echo "CA Certificate to: $cacert_existing"
+        echo "CA Certificate full path: $cacert_existing_fp"
+    else
+        use_existing_ca="No"
+        # ca_location=$ca_location
+        # echo "CA Location: $ca_location"
+        echo "This will generate new CA Certificate"
+        echo ""
+        echo "CA Config File:"
+        echo "  '${config_dir}/{${caconfig_file}}'"
+        until [[ -f "$caconfig_file_fp" ]]; do
+            read -p "CA Config [$caconfig_file]: " caconfig_file
+            [[ -z "$caconfig_file" ]] && caconfig_file=$default_caconfig_file
+            caconfig_file_fp=${config_dir}/${caconfig_file}
+            [[ ! -f $caconfig_file_fp ]] \
+            && echo "cert-gen: cannot access '$caconfig_file_fp': No such file or directory"
+        done
+        echo "CA Config set to : $caconfig_file"
+        echo "CA Config full path: $caconfig_file_fp"
+    fi
+
+    echo ""
+    default_answer=No
+    echo "Server Config File:"
+    echo "  '${config_dir}/{${default_config_file}}'"
+    if yesno --default $default_answer "Change Config file? (Yes|No) [$default_answer] "; then
+		read -p "Server file [$default_config_file]: " config_file
+		[[ -z "$config_file" ]] && config_file=$default_config_file
+        echo "Server file set to: $config_file"
+        config_file_fp=${config_dir}/${config_file}
+        echo "Server file full path: $config_file_fp"
+    else
+        config_file=$default_config_file
+        echo "Using Server Config file: $config_file"
+        config_file_fp=${config_dir}/${config_file}
+        echo "Server Config file full path: $config_file_fp"
+    fi
 
     echo ""
     default_answer=No
@@ -203,17 +336,6 @@ set_params() {
     else
         days=$default_days
         echo "Using default Days: $days days"
-    fi
-
-    echo ""
-    default_answer=Yes
-    if yesno --default $default_answer "Set Prefix for Output files? (Yes|No) [$default_answer] "; then
-		read -p "Output Prefix [$out_prefix]: " out_prefix
-		[[ -z "$out_prefix" ]] && out_prefix=$out_prefix_default
-        echo "Output Prefix set to: $out_prefix"
-    else
-        out_prefix=$out_prefix
-        echo "Using default Output Prefix: $out_prefix"
     fi
 
     echo ""
@@ -272,47 +394,17 @@ set_params() {
     fi
     echo "Set Create Client Certificate to: $client_cert_create"
     echo "Set Client Common Name to: $client_cn"
-    
-    echo ""
-    default_answer=No
-    echo "Current Config Dir:"
-    echo "  '${config_dir}'"
-    if yesno --default $default_answer "Change Config dir? (Yes|No) [$default_answer] "; then
-		read -p "Config dir [$config_dir]: " config_dir
-		[[ -z "$config_dir" ]] && config_dir=$default_config_dir
-        echo "Config dir set to: $config_dir"
-    else
-        config_dir=$config_dir
-        echo "Using Config dir: $config_dir"
-    fi
-
-    echo ""
-    default_answer=No
-    echo "Current Config File:"
-    echo "  '${config_dir}/{${default_config_file}}'"
-    if yesno --default $default_answer "Change Config file? (Yes|No) [$default_answer] "; then
-		read -p "Config file [$default_config_file]: " config_file
-		[[ -z "$config_file" ]] && config_file=$default_config_file
-        echo "Config file set to: $config_file"
-        config_file_fp=${config_dir}/${config_file}
-        echo "Config file full path: $config_file_fp"
-    else
-        config_file=$default_config_file
-        echo "Using Config file: $config_file"
-        config_file_fp=${config_dir}/${config_file}
-        echo "Config file full path: $config_file_fp"
-    fi
 }
 
 get_config() {
     if [ ! -d $config_dir ]; then
-        echo "config_file: cannot access '$config_file_fp': No such file or directory"
+        echo "cert-gen: cannot access '$config_file_fp': No such file or directory"
         echo "Creating... '$config_dir' for future use"
         mkdir -p $config_dir
     fi
 
     if [ ! -f $config_file_fp ]; then
-        echo "config_file: cannot access '$config_file_fp': No such file or directory"
+        echo "cert-gen: cannot access '$config_file_fp': No such file or directory"
         echo "Creating empty config file... '$config_file_fp'"
         touch $config_file_fp
     else
@@ -327,6 +419,7 @@ get_config() {
         echo ""
     fi
     
+    clear_screen
     print_params 'Running'
     echo ""
     default_answer=Yes
@@ -340,12 +433,28 @@ get_config() {
 }
 
 certificate_check() {
-
+    clear_screen
     local ans
     
     echo ""
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    echo "                        Check Server CSR"
+    echo "                    Check CA Certificate"
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+    echo "file:"
+    echo "  $used_cacert"
+    echo ""
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+    openssl x509 -in $used_cacert -text -noout
+    echo ""
+    sleep 1
+
+    echo ""
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+    echo "                     Check Server CSR"
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+    echo "file:"
+    echo "  $out_server_csr"
+    echo ""
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
     openssl req -in $out_server_csr -noout -text
     echo ""
@@ -353,9 +462,13 @@ certificate_check() {
 
     echo ""
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    echo "                    Check Server CA Certificate"
+    echo "                 Check Server Certificate"
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    openssl x509 -in $out_ca_cert -text -noout
+    echo "file:"
+    echo "  $out_server_cert"
+    echo ""
+    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+    openssl x509 -in $out_server_cert -text -noout
     echo ""
     sleep 1
 
@@ -367,6 +480,10 @@ certificate_check() {
             echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             echo "                       Check Client CSR"
             echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+            echo "file:"
+            echo "  $out_client_csr"
+            echo ""
+            echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             openssl req -in $out_client_csr -noout -text
             echo ""
             sleep 1
@@ -374,6 +491,10 @@ certificate_check() {
             echo ""
             echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             echo "                   Check Client Certificate"
+            echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+            echo "file:"
+            echo "  $out_client_cert"
+            echo ""
             echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
             openssl x509 -in $out_client_cert -text -noout
             echo ""
@@ -395,51 +516,83 @@ certificate_generate() {
     echo "             START OF GENERATING CERTIFICATE PROCES"
     echo "# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #"
     echo ""
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    echo "                 Generate CA Private Key"
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    if [ "$master_pass_is" == "True" ]; then
-        cmd="openssl genrsa -aes256 -passout pass:$pass_phrase -out $out_ca_key $rsa_bit"
+    
+    ans=$(tr '[:upper:]' '[:lower:]' <<<$use_existing_ca)
+    if [ "$ans" == "yes" ]; then
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        echo "                 Use Existing: CA Private Key: "
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        if [ ! -f $used_cakey ]; then
+            echo "CA Private Key::"
+            echo "  '${used_cakey}}'"
+            echo "NOT Exist!"
+            exit 1
+        fi
+
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        echo "                 Use Existing: CA Certificate: "
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        if [ ! -f $used_cacert ]; then
+            echo "CA Certificate::"
+            echo "  '${used_cacert}}'"
+            echo "NOT Exist!"
+            echo ""
+            exit 1
+        fi
     else
-        cmd="openssl genrsa -aes256 -out $out_ca_key $rsa_bit"
-    fi
-    if [ -f $out_ca_key ]; then
-        default_answer=Yes
-        echo "CA Private Key Already Exist:"
-        echo "  '${out_ca_key}}'"
-        if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        echo "                 Generate CA Private Key"
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        if [ "$master_pass_is" == "True" ]; then
+            cmd="openssl genrsa -aes256 -passout pass:$pass_phrase -out $used_cakey $rsa_bit"
+        else
+            cmd="openssl genrsa -aes256 -out $used_cakey $rsa_bit"
+        fi
+        if [ -f $used_cakey ]; then
+            default_answer=Yes
+            echo "CA Private Key Already Exist:"
+            echo "  '${used_cakey}}'"
+            if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
+                echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
+                eval "$cmd"
+            else
+                echo "Using existing: $used_cakey"
+            fi
+        else
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
             eval "$cmd"
-        else
-            echo "Using existing: $out_ca_key"
         fi
-    else
-        echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-out\)/pass:**** -out/g'
-        eval "$cmd"
-    fi
 
-    echo ""
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    echo "                Generate CA Certificate"
-    echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    if [ "$master_pass_is" == "True" ]; then
-        cmd="openssl req -new -x509 -days $days -passin pass:$pass_phrase -key $out_ca_key -sha256 -out $out_ca_cert -config $config_file_fp"
-    else
-        cmd="openssl req -new -x509 -days $days -key $out_ca_key -sha256 -out $out_ca_cert -config $config_file_fp"
-    fi
-    if [ -f $out_ca_cert ]; then
-        default_answer=Yes
-        echo "CA Certificate Already Exist:"
-        echo "  '${out_ca_cert}'"
-        if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
+        echo ""
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        echo "                Generate CA Certificate"
+        echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        if [ ! -f $caconfig_file_fp ]; then
+            echo "CA Config file::"
+            echo "  '${caconfig_file_fp}}'"
+            echo "NOT Exist!"
+            echo ""
+            exit 1
+        fi
+        if [ "$master_pass_is" == "True" ]; then
+            cmd="openssl req -new -x509 -days $days -passin pass:$pass_phrase -key $used_cakey -sha256 -out $used_cacert -config $caconfig_file_fp"
+        else
+            cmd="openssl req -new -x509 -days $days -key $used_cakey -sha256 -out $used_cacert -config $caconfig_file_fp"
+        fi
+        if [ -f $used_cacert ]; then
+            default_answer=Yes
+            echo "CA Certificate Already Exist:"
+            echo "  '${used_cacert}'"
+            if yesno --default $default_answer "overwrite? (Yes|No) [$default_answer] "; then
+                echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-key\)/pass:**** -key/g'
+                eval "$cmd"
+            else
+                echo "Using existing: $used_cacert"
+            fi
+        else
             echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-key\)/pass:**** -key/g'
             eval "$cmd"
-        else
-            echo "Using existing: $out_ca_cert"
         fi
-    else
-        echo "$cmd" | sed -e 's/\(pass:.\{1,\}\s\-key\)/pass:**** -key/g'
-        eval "$cmd"
     fi
     
     echo ""
@@ -468,7 +621,7 @@ certificate_generate() {
 
     echo ""
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
-    echo "           Generate Certificate Signing Request (CSR)"
+    echo "       Generate Server Certificate Signing Request (CSR)"
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
     cmd="openssl req -sha256 -new -key $out_server_key -config $config_file_fp -out $out_server_csr"
     if [ -f $out_server_csr ]; then
@@ -491,9 +644,9 @@ certificate_generate() {
     echo "           Generate the Server Signed Certificate:"
     echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
     if [ "$master_pass_is" == "True" ]; then
-        cmd="openssl x509 -req -sha256 -days $days -passin pass:$pass_phrase -in $out_server_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -signkey $out_server_key -out $out_server_cert"
+        cmd="openssl x509 -req -sha256 -days $days -passin pass:$pass_phrase -in $out_server_csr -CA $used_cacert -CAkey $used_cakey -CAcreateserial -signkey $out_server_key -out $out_server_cert"
     else
-        cmd="openssl x509 -req -sha256 -days $days -in $out_server_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -signkey $out_server_key -out $out_server_cert"
+        cmd="openssl x509 -req -sha256 -days $days -in $out_server_csr -CA $used_cacert -CAkey $used_cakey -CAcreateserial -signkey $out_server_key -out $out_server_cert"
     fi
     if [ -f $out_server_cert ]; then
         default_answer=Yes
@@ -599,10 +752,10 @@ certificate_generate() {
         echo "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
         if [ "$master_pass_is" == "True" ]; then
             cmd1="echo 'extendedKeyUsage = clientAuth' > $out_client_extfile"
-            cmd2="openssl x509 -req -days $days -sha256 -in $out_client_csr -passin pass:$pass_phrase -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
+            cmd2="openssl x509 -req -days $days -sha256 -in $out_client_csr -passin pass:$pass_phrase -CA $used_cacert -CAkey $used_cakey -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
         else
             cmd1="echo 'extendedKeyUsage = clientAuth' > $out_client_extfile"
-            cmd2="openssl x509 -req -days $days -sha256 -in $out_client_csr -CA $out_ca_cert -CAkey $out_ca_key -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
+            cmd2="openssl x509 -req -days $days -sha256 -in $out_client_csr -CA $used_cacert -CAkey $used_cakey -CAcreateserial -out $out_client_cert -extfile $out_client_extfile"
         fi
         if [ -f $out_client_cert ]; then
             default_answer=Yes
@@ -738,6 +891,7 @@ function yesno()
     [[ "$ans" = "y" || "$ans" == "yes" ]]
 }
 
+clear_screen
 set_params
 get_config
 certificate_generate
